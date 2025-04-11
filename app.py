@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import requests
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 import logging
@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # OpenAI GPT-4o API configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 def predict_box_cac(historical_data, future_box_info):
     """Predict the Customer Acquisition Cost (CAC) in euros for a future welcome box using GPT-4o API."""
@@ -28,35 +28,26 @@ Historical Data: {historical_data}
 
 Future Box Info: {future_box_info}
 """
-        headers = {
-            'Authorization': f'Bearer {OPENAI_API_KEY}',
-            'Content-Type': 'application/json'
-        }
         cacs = []
         for _ in range(5):  # Run 5 times and average
-            payload = {
-                'model': 'gpt-4o',  # Use GPT-4o model
-                'messages': [
+            logger.info("Sending request to OpenAI API")
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
                     {
-                        'role': 'system',
-                        'content': 'You are an expert in predicting Goodiebox performance, skilled at analyzing historical trends.'
+                        "role": "system",
+                        "content": "You are an expert in predicting Goodiebox performance, skilled at analyzing historical trends."
                     },
                     {
-                        'role': 'user',
-                        'content': prompt
+                        "role": "user",
+                        "content": prompt
                     }
                 ],
-                'max_tokens': 10,
-                'temperature': 0.2,  # Slightly higher than 0 for robustness, but still deterministic
-                'seed': 42  # For reproducibility, supported by OpenAI API
-            }
-            logger.info(f"Sending request to OpenAI API: {payload}")
-            response = requests.post(OPENAI_API_URL, json=payload, headers=headers)
-            if response.status_code != 200:
-                logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
-                raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
-            result = response.json()
-            cac = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip()
+                max_tokens=10,
+                temperature=0.2,  # Slightly higher than 0 for robustness
+                seed=42  # For reproducibility
+            )
+            cac = response.choices[0].message.content.strip()
             logger.info(f"Run response: {cac}")
             if not cac:
                 logger.error("Model returned an empty response")
