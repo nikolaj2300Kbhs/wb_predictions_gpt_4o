@@ -14,12 +14,12 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 
-# ChatGPT 4o API configuration
+# OpenAI GPT-4o API configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-CHATGPT_API_URL = 'https://api.openai.com/v1/chat/completions'
+OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
 
 def predict_box_cac(historical_data, future_box_info):
-    """Predict the Customer Acquisition Cost (CAC) in euros for a future welcome box using ChatGPT 4o API."""
+    """Predict the Customer Acquisition Cost (CAC) in euros for a future welcome box using GPT-4o API."""
     try:
         prompt = f"""
 You are an expert in evaluating Goodiebox welcome boxes for their ability to attract new members at low Customer Acquisition Cost (CAC). Based on the historical data provided, which includes box features and their corresponding CAC in euros, predict the CAC for the future welcome box. The CAC should be a numerical value in euros, with two decimal places (e.g., 10.50). Consider factors such as the number of products, total retail value, number of unique categories, number of full-size products, number of premium products (>€20), total weight, average product rating, average brand rating, and average category rating. Return only the numerical CAC value in euros (e.g., 10.50).
@@ -35,7 +35,7 @@ Future Box Info: {future_box_info}
         cacs = []
         for _ in range(5):  # Run 5 times and average
             payload = {
-                'model': 'gpt-4o',  # ChatGPT 4o model
+                'model': 'gpt-4o',  # Use GPT-4o model
                 'messages': [
                     {
                         'role': 'system',
@@ -47,11 +47,11 @@ Future Box Info: {future_box_info}
                     }
                 ],
                 'max_tokens': 10,
-                'temperature': 0,
-                'seed': 42  # OpenAI supports seed for reproducibility
+                'temperature': 0.2,  # Slightly higher than 0 for robustness, but still deterministic
+                'seed': 42  # For reproducibility, supported by OpenAI API
             }
             logger.info(f"Sending request to OpenAI API: {payload}")
-            response = requests.post(CHATGPT_API_URL, json=payload, headers=headers)
+            response = requests.post(OPENAI_API_URL, json=payload, headers=headers)
             if response.status_code != 200:
                 logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
                 raise Exception(f"OpenAI API error: {response.status_code} - {response.text}")
